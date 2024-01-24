@@ -1,0 +1,4 @@
+"0","Q2STRIPS_ci$price <-  (Q2STRIPS_ci$pbid + Q2STRIPS_ci$pask)/2)
+"
+"2","Error: unexpected ')' in ""Q2STRIPS_ci$price <-  (Q2STRIPS_ci$pbid + Q2STRIPS_ci$pask)/2)""
+"
