@@ -76,10 +76,28 @@ print(c(optionA_value, optionB_value))
 ## 3b
 Suppose Option A is the only payout option. Discuss how the lottery winner can convert the thirty payments into a single payment using coupon STRIPS for settlement on 2023-12-15. For the purpose of part 3b, assume that the lottery winner can buy or sell the coupon STRIPS in the TeamAssignment1_Q3_strips.csv file without any restrictions. How much can the lottery winner receive from selling coupon STRIPS?
 
+```{r}
+
+```
 
 
 ## 3c 
 Suppose Option A is the only payout option. Discuss how the lottery’s payment department can use coupon STRIPS to fund the thirty payments. For the purpose of part 3c, assume that the payment department can buy or sell the coupon STRIPS in the TeamAssignment1_Q3_strips.csv file without any restrictions. How much does the payment department need to fund the payments in Option A using coupon STRIPS?
+
+we'll going to use the ask price
+```{r}
+#2024-2052 every may 15
+strips_3c <- filter(Q2STRIPS_ci, maturity > "2024-02-15" & maturity < "2052-06-30" & month(maturity) == 5)
+PV <- Q3data$Amount * Q3data$Discount
+number_buy_3c <- PV/strips_3c$price
+
+print(paste("they spend", sum(number_buy_3c*strips_3c$pask) - sum(PV), "more than the lottery PV"))
+
+print(paste("the payment department need to fund", sum(number_buy_3c*strips_3c$pask)))
+```
+
+
+
 
 
 
