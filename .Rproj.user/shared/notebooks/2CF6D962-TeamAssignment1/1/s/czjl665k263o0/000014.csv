@@ -1,0 +1,6 @@
+"0","print(paste(""the lottery winner receive"", round(sell,2), ""from selling coupon STRIPS."", ""This is"", round(optionA_value - sell,2), ""lower than the payment PV 79862180.""))
+"
+"1","[1]"
+"1"," ""the lottery winner receive 79168268.58 from selling coupon STRIPS. This is 693911.11 lower than the payment PV 79862180."""
+"1","
+"

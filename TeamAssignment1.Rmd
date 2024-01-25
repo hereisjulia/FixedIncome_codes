@@ -10,6 +10,7 @@ library(readr)
 library(ggplot2)
 library(lubridate)
 library(tidyverse)
+library(jrvFinance)
 ```
 
 ```{r}
@@ -36,6 +37,7 @@ Q2STRIPS_ci$discount <- Q2STRIPS_ci$price/100
 ## Interporation
 ```{r}
 newttm <- as.numeric((Q3data$Date - settlement)/365)
+ttm <- as.numeric((Q2STRIPS_ci$maturity - settlement)/365)
 
 cubic_spline <- as.data.frame(spline(as.numeric(ttm), 
        Q2STRIPS_ci$discount, 
@@ -77,9 +79,66 @@ print(c(optionA_value, optionB_value))
 Suppose Option A is the only payout option. Discuss how the lottery winner can convert the thirty payments into a single payment using coupon STRIPS for settlement on 2023-12-15. For the purpose of part 3b, assume that the lottery winner can buy or sell the coupon STRIPS in the TeamAssignment1_Q3_strips.csv file without any restrictions. How much can the lottery winner receive from selling coupon STRIPS?
 
 
+```{r}
+target <- Q2STRIPS_ci[Q2STRIPS_ci$maturity == as.Date("2052-08-15"),]
+optionA_value/target$price # the amount needed
+optionA_value/target$price * target$pbid # the selling price of these target strips mature on 2052-08-15
+sell <- optionA_value/target$price * target$pbid
+
+print(paste("the lottery winner receive", round(sell,2), "from selling coupon STRIPS.", "This is", round(optionA_value - sell,2), "lower than the payment PV 79862180."))
+```
+
 
 ## 3c 
 Suppose Option A is the only payout option. Discuss how the lottery’s payment department can use coupon STRIPS to fund the thirty payments. For the purpose of part 3c, assume that the payment department can buy or sell the coupon STRIPS in the TeamAssignment1_Q3_strips.csv file without any restrictions. How much does the payment department need to fund the payments in Option A using coupon STRIPS?
+
+we'll going to use the ask price
+買進strips，並在每年6/30賣出，算入accrued interest的clean price
+
+```{r}
+# 6/30 - 8/15
+accrued_interest <- 100 * 46/92
+accrued_interest
+```
+
+```{r}
+#2024-2052 every may 15
+strips_3c <- Q2STRIPS_ci[Q2STRIPS_ci$maturity > "2024-02-15" & Q2STRIPS_ci$maturity < "2052-08-30" & month(Q2STRIPS_ci$maturity) == 8,]
+nrow(strips_3c)
+PV <- Q3data$Amount * Q3data$Discount
+number_buy_3c <- PV/strips_3c$price
+
+print(paste("they spend", sum(number_buy_3c*strips_3c$pask) - sum(PV), "more than the lottery PV"))
+
+print(paste("the payment department need to fund", sum(number_buy_3c*strips_3c$pask)))
+```
+
+## Def_wrong
+```{r}
+Q2STRIPS_ci[115,]
+optionA_value / Q2STRIPS_ci[115,]$price # amount should buy
+#可以對ask/bid price做cubric?
+
+cubic_pbid <- as.data.frame(spline(as.numeric(ttm), 
+       Q2STRIPS_ci$pbid, 
+       xout = newttm,
+       method = "natural"))
+
+cubic_pask <- as.data.frame(spline(as.numeric(ttm), 
+       Q2STRIPS_ci$pask, 
+       xout = newttm,
+       method = "natural"))
+
+cubic_bidask <- data.frame( pbid = cubic_pbid$y, pask = cubic_pask$y)
+cubic_bidask <- cbind(Q3data, cubic_bidask)
+
+cubic_bidask$Dept_fund <- cubic_bidask$Amount/100 * cubic_bidask$pask
+
+print(paste("The payment department need to fund:", round(sum(cubic_bidask$Dept_fund),2),
+            ". They spend", round(sum(number_buy_3c*strips_3c$pask) - sum(PV),2), "more than the lottery PV", round(sum(PV),2)))
+```
+
+
 
 
 

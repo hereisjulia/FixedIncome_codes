@@ -1,0 +1,37 @@
+"0","Q1data <- read_csv(""TeamAssignment1_Q1.csv"")"
+"2","[1mRows: [22m[34m4[39m [1mColumns: [22m[34m4[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[32mdbl[39m  (3): coupon, clean.price, face.value
+[34mdate[39m (1): maturity"
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"0","Q2STRIPS <- read_csv(""TeamAssignment1_Q2_strips.csv"")"
+"2","[1mRows: [22m[34m210[39m [1mColumns: [22m[34m4[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m  (1): type
+[32mdbl[39m  (2): pbid, pask
+[34mdate[39m (1): maturity"
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"0","Q2Bonds <- read_csv(""TeamAssignment1_Q2_bonds.csv"")"
+"2","[1mRows: [22m[34m26[39m [1mColumns: [22m[34m5[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[32mdbl[39m  (4): coupon, pbid, pask, team
+[34mdate[39m (1): maturity"
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"0","Q3data <- read_csv(""TeamAssignment1_Q3.csv"")"
+"2","[1mRows: [22m[34m29[39m [1mColumns: [22m[34m2[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[32mdbl[39m  (1): Amount
+[34mdate[39m (1): Date"
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."

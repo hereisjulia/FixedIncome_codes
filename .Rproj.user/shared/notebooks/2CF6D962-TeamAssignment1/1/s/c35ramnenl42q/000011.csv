@@ -1,0 +1,6 @@
+"0","ttm <- as.numeric((Q2STRIPS_ci$Date - settlement)/365)
+"
+"2","Warning: Unknown or uninitialised column: `Date`."
+"2","Error in `-.Date`(Q2STRIPS_ci$Date, settlement) : 
+  can only subtract from ""Date"" objects
+"

@@ -1,0 +1,7 @@
+"0","print(paste(""The payment department need to fund:"", round(sum(cubic_bidask$Dept_fund),2),
+            "". They spend"", round(sum(number_buy_3c*strips_3c$pask) - sum(PV),2), ""more than the lottery PV"", round(sum(PV),2)))
+"
+"1","[1]"
+"1"," ""The payment department need to fund: 80076513.05 . They spend 219338.2 more than the lottery PV 79862179.69"""
+"1","
+"

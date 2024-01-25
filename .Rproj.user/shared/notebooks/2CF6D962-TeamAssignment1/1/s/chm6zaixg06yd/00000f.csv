@@ -1,0 +1,5 @@
+"0","settlement <- as.Date(""2023-12-15"")"
+"0",""
+"0","# use the coupon stips only for discount rate"
+"0","Q2STRIPS_ci <- filter(Q2STRIPS, type == ""ci"")"
+"0","Q2STRIPS_ci$price <-  (Q2STRIPS_ci$pbid + Q2STRIPS_ci$pask)/2"
