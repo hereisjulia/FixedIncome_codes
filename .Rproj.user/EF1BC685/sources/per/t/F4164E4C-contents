@@ -16,7 +16,12 @@ bond.duration(settle,
               comp.freq = freq)
 
 # 需要計算的: ytm, market value of each bond to get the weights.
+# how to calc. the ytm?
 
 
 
+
+# Q2  
+Q2_bonds <- fread("./data/TeamAssignment2_Q2_bond.csv")
+settle <- as.Date("2023-12-15")
 
