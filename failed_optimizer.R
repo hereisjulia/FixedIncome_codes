@@ -55,10 +55,6 @@ ssr(parm, data)
 
 
 
-theta <- q2a_model$coefficients
-theta
-
-
 ggplot(Q2_bonds)+
   geom_point(aes(x = maturity, y = phat))+
   geom_point(aes(x = maturity, y = pfull), color = "red")

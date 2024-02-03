@@ -1,0 +1,357 @@
+
+library(data.table)
+library(jrvFinance)
+library(tidyverse)
+library(ggplot2)
+
+######## Full Price ##########
+TTM <- 2
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.014
+N <- freq * TTM
+
+df <- data.table( t = seq(0, TTM, by=1/freq),
+                  n = seq(0, N, by=1),
+                  cf = c(0, rep(coupon*face/freq, N -1), coupon*face/freq + face ) )
+
+df[, disfac := 1/(1+YTM/freq) ^ (freq*TTM)]
+
+sum(df$disfac * df$cf) %>% round(4)
+
+
+######## Partial Period ##########
+## Q1
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.016
+N <- 2*freq
+
+last.coupon.date <- as.IDate("2019-11-15")
+next.coupon.date <- as.IDate(coupons.dates(settle, maturity)[1])
+DSC <- as.numeric(next.coupon.date - settle)
+E <- as.numeric(next.coupon.date - last.coupon.date)
+frac <- DSC/E
+round(DSC/E, 4)
+
+## Q2
+df <- data.table( n = seq(0, N, by=1),
+                  cf = c(0, rep(coupon*face/freq, N-1), coupon*face/freq+face ) )
+df$n[2:(N+1)] <- df$n[2:(N+1)]-1 + frac
+df[, t := n/2 ]
+df[, disfac := 1/(1+YTM/freq)^(freq*t)]
+round(sum( df$disfac * df$cf ), 4)
+
+
+######## Clean Price ##########
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.016
+N <- 2*freq
+
+## Q1
+df <- data.table(n = seq(0, N, by = 1),
+                 cf = c(0, rep(coupon * face /freq, N-1), coupon * face / freq + face))
+accint <- (1-frac) * coupon * face / freq
+round(accint,4)
+
+## Q2
+df$n[2: (N+1)] <- df$n[2: (N+1)] -1 +frac
+df[, t := n/freq]
+df[, disfac := 1/(1+YTM/freq)^(freq*t)]
+full.price <- sum(df$disfac * df$cf)
+clean.price <- full.price - accint
+round(clean.price, 4)
+
+######## jrvFinance Practice ##########
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.016
+N <- 2*freq
+
+## Q1
+bond.price(settle, maturity, coupon, freq, YTM, "ACT/ACT", freq)
+
+## Q2
+YTM <- 0.01562 
+round(bond.TCF(settle, maturity, coupon, freq, "ACT/ACT")$accrued, 4)
+
+## Q3
+YTM <- 0.016
+round(
+  bond.price(settle, maturity, coupon, freq, YTM, "ACT/ACT", freq) +
+    bond.TCF(settle, maturity, coupon, freq, "ACT/ACT")$accrued, 4)
+
+## Q4
+coupons.dates(settle,maturity,freq)
+
+################ STRIPS ################## 
+## Q1
+CI <- fread("./datas/cstrips.csv")
+CI[, pmid := (pbid + pask) /2]
+CI[, disfac := pmid/face]
+round(CI[maturity == "2022-11-15", disfac], 4)
+
+## Q2
+SP <- fread("./datas/pstrips.csv")
+SP[, pmid := (pbid + pask) /2]
+SP[, disfac := pmid/face]
+round(SP[maturity == "2022-11-15", disfac], 4)
+
+################ Arbitrage ################## 
+## Q1
+# pricing the bond via "arbistrage
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+
+df <- data.table(date = coupons.dates(settle, maturity, freq))
+N <- nrow(df)
+df[, coupons := rep(coupon*face/freq, N)]
+df[, principal := c(rep(0, N-1), 100)]
+df[, cf := bond.TCF(settle, maturity, coupon, freq, "ACT/ACT")$cf]
+df.ci <- merge(df, CI, by.x = "date", by.y = "maturity", all.x = TRUE)
+df.sp <- merge(df, SP, by.x = "date", by.y = "maturity", all.x = TRUE)
+
+arb.bid <- sum(df.ci$coupons * df.ci$pbid/100) + sum(df.sp$principal[N] * df.sp$pbid[N]/100)
+round(arb.bid,4)
+
+## Q2
+arb.ask <- sum(df.ci$coupons * df.ci$pask/100) + sum(df.sp$principal[N] * df.sp$pask[N]/100)
+round(arb.ask,4)
+
+################ Coupon Yield Curve ################## 
+
+rates <- c(0.0425, 0.0463, 0.0463, 0.0427, 0.0365, 0.0349, 0.0355)
+data <- data.frame( maturity = c(0.25, 0.5, 1, 2, 5, 10, 30), yield =  rates)
+ggplot(data = data)+
+  geom_point(aes(x = maturity, y = rates))
+
+################ Spot Curve ################## 
+
+CI <- fread("./datas/cstrips.csv")
+CI[, ttm := as.numeric(maturity - settle)/365]
+CI[, pmid := (pask + pbid)/2]
+
+zcb.price <- function(zcb.yield, ttm, freq = 2){
+  return(100 /(1 - zcb.yield /freq) ^ (freq*ttm))
+}
+zcb.yield <- function(zcb.price, ttm, freq = 2){
+  return(freq * ((100 /zcb.price) ^(1 /(freq*ttm))-1))
+}
+
+CI[, Z := zcb.yield(pmid, ttm)]
+ggplot(CI, aes(x = ttm, y = Z*100))+
+  geom_line()+
+  xlab("Maturity in years") +
+  ylab("Spot rate in %") +
+  ggtitle("Spot curve from C-STRIPS")+
+  theme_minimal()
+
+round(CI[maturity == "2021-11-15",]$Z, 4)
+
+################ Interpolation ################## 
+
+fun.1 <- function(x) 1 /(1 + x^2)
+actual_df <- data.frame( x = seq(-5,5,by=0.5) )
+actual_df$y <- 1/(1+actual_df$x^2)
+ggplot(actual_df,aes(x=x,y=y)) +
+  geom_point(color="red") + xlab("") + ylab("") +
+  stat_function(fun=fun.1)+xlim(-5,5)
+
+xout <- seq(-4.9, 4.9, by=0.1 )
+spline_df <- as.data.table(spline(x=actual_df$x, y=actual_df$y, xout=xout,method="natural"))
+ggplot(spline_df,aes(x=x,y=y)) +
+  geom_point(color="blue") + stat_function(fun=fun.1)
+
+################ Powerball example ################## 
+payments <- fread("./datas/MegaMillions.csv")
+CI <- fread("./datas/cstrips.csv")
+CI[, pmid := (pask + pbid)/2]
+CI[, ttm:= as.numeric(maturity - settle)]
+CI[, Z := zcb.yield(pmid, ttm)]
+spline.spot <- spline(CI$ttm, CI$Z, xout = as.numeric(payments$maturity - settle), method = "natural")
+payments[, spot := spline.spot$y]
+payments[, ttm := spline.spot$x]
+payments[, disfac := 1/(1+spot/freq) ^ (freq*ttm)]
+payments[, pv := amount * disfac]
+
+payments[maturity == "2020-06-30",]$pv
+sum(payments$pv)
+
+################ Recursive Stripping ################## 
+
+## Q1
+treasuries <- fread("./datas/treasuries.csv")
+treasuries[, pmid := 0.5 * (pask + pbid)]
+for (i in 1:nrow(treasuries)){
+  maturity <- df$maturity[i]
+  coupon <- df$coupon[i]
+  accint <- bond.TCF(settle, maturity, coupon, freq, "ACT/ACT", freq)$accrued
+  treasuries$pfull[i] <- treasuries$pmid[i] + accint
+}
+
+
+treasuries[maturity == "2029-08-15" & coupon == 0.01625]$pfull
+
+## Q2
+df <- treasuries
+setorderv(df, c("maturity","coupon"))
+df <- df[,.SD[1],by=maturity]
+z <- as.character(df$maturity)
+z <- substr(z,6,10)
+df <- df[z %in% c("02-15","08-15"),]
+df[, ttm := as.numeric(maturity-settle)/365 ]
+df <- df[c(1:20),]
+# calculate discount factor
+df$disfac <- rep(1,nrow(df))
+df$disfac[1] <- df$pfull[1]/(100+df$coupon[1]*100/2)
+for (i in 2:nrow(df)) {
+  cumdf <- sum(df$disfac[1:i-1])    
+  df$disfac[i] <- ( df$pfull[i] - df$coupon[i]*100/2 * cumdf ) / 
+    (100 + df$coupon[i]*100/2 )
+}
+#  spot rate from discount factors
+df[, spot := 2*( (1/disfac)^(1/(2*ttm))-1) ]
+
+round(df[maturity == "2029-08-15"]$spot, 4)
+
+## Q3
+n <- 20
+A <- matrix(0, nrow = n, ncol = n)
+b <- matrix(0,nrow=n,ncol=1)
+for (i in 1:n) {
+  b[i] <- df$pfull[i]/100
+}
+for (i in 1:n){
+  b[i] <- df$pfull[i]/100
+  A[i, i] <- 1 + df$coupon[i] /2
+  if (i > 1){
+    for (j in 1:(i-1)) A[i, j] <- df$coupon[i]/2
+  }
+}
+D <- solve(A,b)
+Z <- 2*((1/D)^(1/(2*df$ttm))-1)
+
+diff <- Z-as.vector(df$spot)
+max(abs(diff))
+
+
+################ Duration of a zero coupon bond ################## 
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+ttm <- as.numeric(maturity - settle)/365
+freq <- 2
+spot <- 0.01597
+durmac <- ttm
+durmod <- durmac / (1 + spot /freq)
+round(durmod,4)
+
+durmac <- bond.duration(settle,maturity,coupon = 0,freq,spot,"ACT/ACT",modified=FALSE,freq)
+durmod <- bond.duration(settle,maturity,coupon = 0,freq,spot,"ACT/ACT",modified=TRUE,freq)
+round(durmod,4)
+
+################ Duration of a coupon bond ################## 
+
+## Q1
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.01562
+N <- 2*freq
+
+cf <- bond.TCF(settle, maturity, coupon, freq, "ACT/ACT")$cf
+tcf <- bond.TCF(settle, maturity, coupon, freq, "ACT/ACT")$t
+df <- data.table(ttm = tcf, cf = cf)
+
+# discount factor and present value > weights
+df[, disfac := 1 /(1 + YTM/freq)^(2 *df$ttm)]
+df[, pv := disfac * cf]
+df[, wt := pv /sum(pv)]
+df[, wtdurmac := wt * ttm]
+Dmac <- sum(df$wtdurmac)
+Dmod <- Dmac/(1+YTM/2)
+round(Dmod,3)
+## Q2
+
+bond.duration(settle,maturity,coupon,freq,YTM,"ACT/ACT",modified=FALSE,freq)
+round(bond.duration(settle,maturity,coupon,freq,YTM,"ACT/ACT",modified=TRUE,freq),3)
+
+################ Duration uses ################## 
+
+## Q1
+settle <- as.IDate("2020-01-15")
+maturity <- as.IDate("2021-11-15")
+coupon <- 0.02
+freq <- 2
+YTM <- c(0.01562, 0.01662)
+
+Pchange <- -Dmod * 0.001 ##first order approximation
+round(Pchange*100, 4)
+
+## Q2
+price <- NA
+accint <- NA
+pfull <- NA
+for (i in 1:2){
+  price[i] <- bond.price(settle, maturity, coupon, freq, YTM[i], "ACT/ACT", freq)
+  accint[i] <- bond.TCF(settle,maturity,coupon,freq,"ACT/ACT")$accrued
+  pfull[i] <- price[i] + accint[i]
+}
+round((pfull[2]-pfull[1])/pfull[1] *100,4)
+
+################ Convexity ################## 
+settle <- as.IDate("2020-01-25")
+maturity <- as.IDate("2021-11-15")
+face <- 100
+coupon <- 0.02
+freq <- 2
+YTM <- 0.01562
+
+bond.convexity <- function(settle,mature,coupon,comp.freq=2,yield,convention) {
+  z  <- as.data.frame(bond.TCF(settle,mature,coupon,comp.freq,convention))
+  cf <- z$cf
+  t  <- z$t
+  r  <- yield
+  m  <- comp.freq
+  return ( 1/sum( cf / (1+r/m)^(t*m) ) * sum( t * (t+1/m) * cf / (1 + r/m)^(t*m+2) ) )
+}
+
+convexity <- bond.convexity(settle, maturity, coupon, freq, YTM, "ACT/ACT")
+round(convexity, 3)
+
+# second order approximation of the percentage price change of the price
+dR <- 0.01
+order2Approx <- -Dmod * dR + 0.5 * convexity * dR^2
+
+round(order2Approx*100, 4)
+
+
+
+################ Modified Duration of a Liability ################## 
+
+nper <- 10
+liab <- data.table(period=c(1:nper))
+liab[, maturity := seq(from=DATE(2021,6,30),to=DATE(2030,6,30),by="year")]
+liab[, ttm := as.numeric(maturity-settle)/365]
+liab[, cf  := 10000]
+liab
+
+
+
+
+
