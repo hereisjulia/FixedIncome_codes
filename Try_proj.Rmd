@@ -1,0 +1,57 @@
+---
+title: "FixedIncome- Project"
+author: "Julia"
+date: "2024-02-04"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(data.table)
+library(readxl)
+```
+
+```{r}
+df <- as.data.table(read_excel("./datas/wsjFeb3.xlsx"))
+names(df) <- c("maturity", "coupon", "pbid", "pask", "change", "ask_yield")
+df$maturity <- as.Date(df$maturity, format = "%m/%d/%y")
+df <- df[, -"change"]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

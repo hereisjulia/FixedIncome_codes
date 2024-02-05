@@ -342,6 +342,52 @@ round(order2Approx*100, 4)
 
 
 
+################ Modified Duration of a Liability ################## 
+CI <- fread("./datas/cstrips.csv")
+settle <- as.IDate("2021-03-25")
+nper <- 10
+liab <- data.table(period=c(1:nper))
+liab[, maturity := seq(from=as.IDate("2021-06-30"),to=as.IDate("2030-06-30"),by="year")]
+liab[, ttm := as.numeric(maturity-settle)/365]
+liab[, cf  := 10000]
+
+CI[, pmid := 0.5 * (pask + pbid)]
+CI[, ttm := as.numeric(maturity-settle)/365]
+CI[, spot := zcb.yield(pmid, ttm, freq)]
+
+liab$spot <- spline(CI$ttm, CI$spot, xout = liab$ttm, method = "natural")$y
+liab[, disfac := zcb.price(liab$spot,liab$ttm)/100]
+liab[, PV := cf * disfac]
+liab[, weight := PV /sum(PV)]
+liab[, dmod := ttm / (1 + spot /2)]
+
+round(sum(liab$dmod * liab$weight), 4)
+
+########## Building a Bond Portfolio with a Target Duration ############ 
+
+df <- data.table( 
+  bond = c("A","B"),
+  maturity = as.IDate(c("2023-02-15", "2029-08-15")),
+  coupon = c(0.01375, 0.01625),
+  yield = c(0.00141, 0.01448))
+settle <- as.IDate("2021-03-25")
+target_D <- 5
+
+for (i in 1:nrow(df)){
+  maturity <- df$maturity[i]
+  coupon <- df$coupon[i]
+  yield <- df$yield[i]
+  df$dmod[i] <- bond.duration(settle, maturity, coupon, freq, yield, "ACT/ACT", modified = TRUE, freq)
+}
+
+wA <- (target_D - df$dmod[2]) / (df$dmod[1] - df$dmod[2])
+round(wA, 4)
+
+
+
+
+
+
 
 
 

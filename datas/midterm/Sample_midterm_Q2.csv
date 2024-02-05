@@ -1,0 +1,5 @@
+Security,Period,Maturity,Coupon,YIeld,Price
+Tbill,1,0.5,0,0.05760,97.2006
+Tbill,2,1.0,0,0.05810,94.4337
+Tnote,3,1.5,0.06250,0.06160,100.1265
+Tnote,4,2.0,0.06375,0.06182,100.3579

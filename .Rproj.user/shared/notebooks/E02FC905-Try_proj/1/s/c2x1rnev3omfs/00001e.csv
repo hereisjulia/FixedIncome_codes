@@ -1,0 +1,3 @@
+"0","df <- df[, -""change""]
+"
+"2","Warning: column(s) not removed because not found: [change]"
