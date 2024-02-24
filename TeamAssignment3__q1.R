@@ -10,9 +10,12 @@ names(auction)
 
 table(auction$`Item Industry Name`) %>% sort(decreasing = TRUE)
 
-item <- auction[, names(auction) %like% "Item", with =FALSE]
+prices <- auction[, c("Current Bid", "Sold Price", "Total Sale", "Item Fee Amount")]
+prices[, Gain := `Total Sale` - `Sold Price`]
 
-unique(item$`Item Fee Amount`)
+
+item <- auction[, names(auction) %like% "Item", with =FALSE]
+unique(item$`Item Family Name`)
 
 
 table(item$`Item Fee Amount`) %>% sort(decreasing = TRUE)
