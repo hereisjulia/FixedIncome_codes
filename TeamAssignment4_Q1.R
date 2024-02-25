@@ -8,6 +8,7 @@ library(ExPanDaR)
 library(data.table)
 library(pROC)		# this is needed for calculating the AUC
 
+setwd("E:/MQM_Courses/Term4/FixedIncomeSecurities/FixedIncome_codes/datas")
 #initialize WRDS data server connection
 wrds<-dbConnect(Postgres(),  
                 host='wrds-pgdata.wharton.upenn.edu',
@@ -18,7 +19,7 @@ wrds<-dbConnect(Postgres(),
                 dbname='wrds')
 
 
-load('./datas/TeamAssignment4.RData')
+load('TeamAssignment4.RData')
 # crsp_daily_comp_link is a data.table in the RData file
 
 #Fetch COMPUSTAT data and merge with he linktable above
@@ -226,4 +227,94 @@ setorder(firmdata,permno,fyear,na_count)
 firmdata = firmdata[,.SD[1],by=.(permno,fyear)]
 firmdata[, na_count:=NULL]
 
+############################## step 1&2 done ############################## 
 
+## Step 3: create the status variable
+
+firmdata[, status := as.character("0")]
+fail_firms[status == 1, fail_1 := fail.year - 1]
+fail_firms[status == 1, fail_2 := fail.year - 2]
+
+firmdata <- left_join(firmdata, fail_firms[, -2], by = "permno", copy = FALSE)
+firmdata <- firmdata[is.na(fail.year) | fyear < fail_1, ]
+
+status <- with(firmdata, permno %in% fail_firms$permno & (fyear == fail_1 | fyear == fail_2))
+firmdata$status[status] <- 1
+firmdata <- firmdata[, -c("fail_1", "fail_2")]
+
+## Step 4: Create training and test datasets
+
+setorder(firmdata,permno,fyear)
+first.year <- firmdata[,.SD[1],by='permno']
+train.id = first.year[fyear<=1992]$permno
+test.id = first.year[fyear>1992]$permno
+train = firmdata[permno %in% train.id]
+train = train[fyear<1993]
+test = firmdata[permno %in% test.id]
+test = test[fyear>1992]
+
+c(nrow(train), nrow(test))
+
+#### Q1a ####
+Q1A <- data.table(fy.observation = c(length(train$fyear), length(test$fyear)),
+                  fail.firm = c(nrow(train[status == "1"]), nrow(test[status == "1"])),
+                  dataset = c("train", "test")) 
+#How many firm-year observations are in the training set? How many firms failed in the training set?
+#How many firm-year observations are in the testing set? How many firms failed in the testing set?
+Q1A
+
+#### Q1b ####
+train$status <- as.numeric(train$status)
+training.N <- train[order(-fyear), .SD[1], by = permno]
+
+Alt.1 <- glm( status ~ wc_ta + re_ta + ebit_ta + me_tl + s_ta + lage, family = binomial,
+              data = training.N)
+pred <- predict(Alt.1, newdata=test, type="response")
+Alt.1.auc <- roc(test$status, pred, algorithm=2)$auc
+Alt.m <- glm( status ~ wc_ta + re_ta + ebit_ta + me_tl + s_ta + lage, family = binomial, data = train)
+pred <- predict(Alt.m, newdata=test, type="response")
+Alt.m.auc <- roc(test$status,pred,algorithm=2)$auc
+auc <- data.table(variable = "Altman",
+                  one.period = Alt.1.auc[[1]],
+                  multi.period = Alt.m.auc[[1]])
+# Which model has better accuracy (i.e. higher AUC)?
+auc
+# one-period model performs better
+
+#### Q1c ####
+Alt.1c <- glm( status ~ ni_ta + tl_ta + ca_cl + lage, family = binomial,
+               data = training.N)
+pred <- predict(Alt.1c, newdata=test, type="response")
+Alt.1c.auc <- roc(test$status, pred, algorithm=2)$auc
+Alt.mc <- glm( status ~ ni_ta + tl_ta + ca_cl + lage, family = binomial, data = train)
+pred <- predict(Alt.mc, newdata=test, type="response")
+Alt.mc.auc <- roc(test$status,pred,algorithm=2)$auc
+auc <- rbind(auc,
+             data.table(variable = "Zmijewski",
+                        one.period = Alt.1c.auc[[1]],
+                        multi.period = Alt.mc.auc[[1]]))
+# Which model has better accuracy (i.e. higher AUC)?
+auc[2]
+# one-period model performs slightly better
+
+#### Q1d ####
+
+Alt.1d <- glm( status ~ ni_ta + tl_ta + size + ri_rm + sigma + lage, family = binomial,
+               data = training.N)
+pred <- predict(Alt.1d, newdata=test, type="response")
+Alt.1d.auc <- roc(test$status, pred, algorithm=2)$auc
+Alt.md <- glm( status ~ ni_ta + tl_ta + size + ri_rm + sigma + lage, family = binomial, data = train)
+pred <- predict(Alt.md, newdata=test, type="response")
+Alt.md.auc <- roc(test$status,pred,algorithm=2)$auc
+auc <- rbind(auc,
+             data.table(variable = "Shumay",
+                        one.period = Alt.1d.auc[[1]],
+                        multi.period = Alt.md.auc[[1]]))
+# Which model has better accuracy (i.e. higher AUC)?
+auc[3]
+# multi-period model performs better
+
+#### Q1e ####
+#Comparing across all 6 logit models in 1b-1d, which one is the most accurate in terms of AUC?
+auc1 <- auc %>% pivot_longer(-1, names_to = "period", values_to = "auc") %>% as.data.table()
+auc1[order(-auc), .SD[1]]
